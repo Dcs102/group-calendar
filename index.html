@@ -112,7 +112,40 @@
 
   @media (max-width: 900px) { .sidebar { display: none; } .current-label { min-width: auto; font-size: 15px; } .grid { grid-auto-rows: minmax(80px, 1fr); } }
   @media (max-width: 600px) { .header { padding: 10px 12px; flex-wrap: wrap; gap: 8px; } .add-event-btn { margin-left: 0; width: 100%; text-align: center; } .cell { padding: 2px; } .event-pill { font-size: 9px; padding: 2px 4px; } .sync-label { display:none; } }
+
+  /* ---------------- Dark mode theme ---------------- */
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1115; --surface: #171a21; --primary: #4c8dff; --primary-light: rgba(76,141,255,.16);
+    --text: #e6e9ef; --text-secondary: #9aa3b2; --border: #2a2f3a; --danger: #ff6b6b;
+    --shadow: 0 1px 3px rgba(0,0,0,.45), 0 1px 2px rgba(0,0,0,.5);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.6);
+  }
+  [data-theme="dark"] .cal-loading { background: rgba(15,17,21,.86); }
+  [data-theme="dark"] .cell:hover { background: rgba(76,141,255,.10); }
+  [data-theme="dark"] .cell.other-month { background: #13161d; }
+  [data-theme="dark"] .upcoming-item { background: #1b1f28; }
+  [data-theme="dark"] input, [data-theme="dark"] textarea, [data-theme="dark"] select { background: var(--surface); color: var(--text); }
+  [data-theme="dark"] input::placeholder, [data-theme="dark"] textarea::placeholder { color: var(--text-secondary); opacity: .8; }
+  [data-theme="dark"] .btn-secondary { background: #2a2f3a; color: var(--text); }
+  [data-theme="dark"] .btn-secondary:hover { background: #343b49; }
+  [data-theme="dark"] .setup-banner { background: #33270f; border-bottom-color: #5c4318; color: #f0b27a; }
+  [data-theme="dark"] .setup-banner code { background: rgba(255,255,255,.08); }
+
+  /* Dark-mode toggle button */
+  .theme-toggle { background: none; border: 1px solid var(--border); width: 36px; height: 36px; border-radius: 50%; font-size: 16px; line-height: 1; cursor: pointer; color: var(--text-secondary); transition: background .15s, transform .1s; margin-left: 8px; flex-shrink: 0; }
+  .theme-toggle:hover { background: var(--primary-light); transform: scale(1.08); }
 </style>
+<script>
+(function(){
+  var t;
+  try { t = localStorage.getItem('cal_theme'); } catch(e){}
+  if (t !== 'light' && t !== 'dark') {
+    t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
 </head>
 <body>
 
@@ -125,6 +158,7 @@
 
 <div class="header">
   <h1>&#128197; Group Calendar</h1>
+  <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">&#127769;</button>
   <button class="add-event-btn" id="openAddBtn">+ New Event</button>
   <span class="sync-label"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Connecting&hellip;</span></span>
   <div class="nav-btns">
@@ -216,6 +250,7 @@
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+(() => {
 /* ============================ CONFIG ============================
    Replace the two values below with your Supabase project's URL and
    anon/public key (Dashboard -> Project Settings -> API).            */
@@ -536,6 +571,21 @@ document.addEventListener('keydown', e=>{
 renderCalendar(); renderUpcoming();
 if(client){ setConnStatus('connecting'); loadEvents(); subscribeRealtime(); }
 else { setConnStatus('error','Not configured'); }
+
+/* --------------------------- Dark mode toggle ------------------- */
+const themeToggle = document.getElementById('themeToggle');
+function currentTheme(){ return document.documentElement.getAttribute('data-theme') || 'light'; }
+function setThemeIcon(){ if(themeToggle) themeToggle.textContent = (currentTheme()==='dark' ? '\u2600\uFE0F' : '\uD83C\uDF19'); }
+if(themeToggle){
+  setThemeIcon();
+  themeToggle.onclick = function(){
+    const next = currentTheme()==='dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('cal_theme', next); } catch(e){}
+    setThemeIcon();
+  };
+}
+})();
 </script>
 </body>
 </html>
