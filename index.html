@@ -32,8 +32,14 @@
   .upcoming-item .u-title { font-size: 14px; font-weight: 500; }
   .upcoming-item .u-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
   .no-events { font-size: 13px; color: var(--text-secondary); font-style: italic; }
+  /* Loading / status overlay for the calendar area */
+  .cal-loading { position: absolute; inset: 0; background: rgba(255,255,255,.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 20; }
+  .cal-loading[hidden] { display: none; }
+  .cal-loading p { font-size: 14px; color: var(--text-secondary); margin: 0; text-align: center; padding: 0 16px; }
+  .spinner { width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  .cal-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .cal-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
   .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); background: var(--surface); }
   .weekdays div { padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .3px; }
   .grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(110px, 1fr); overflow-y: auto; }
@@ -145,6 +151,7 @@
   </div>
 
   <div class="cal-wrap">
+    <div class="cal-loading" id="calLoading"><div class="spinner"></div><p>Loading events&hellip;</p></div>
     <div class="weekdays">
       <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
     </div>
@@ -350,12 +357,22 @@ function renderUpcoming(){
 /* ======================= Data layer (Supabase) =================== */
 let retryTimer=null;
 
+function setLoading(mode, msg){
+  const el=document.getElementById('calLoading'); if(!el) return;
+  const spin=el.querySelector('.spinner'), txt=el.querySelector('p');
+  if(mode==='loading'){ el.hidden=false; spin.style.display=''; txt.textContent=msg||'Loading events\u2026'; }
+  else if(mode==='error'){ el.hidden=false; spin.style.display='none'; txt.textContent=msg||"Couldn't reach the calendar. Retrying\u2026"; }
+  else { el.hidden=true; }
+}
+
 async function loadEvents(){
   if(!supabase) return;
+  setLoading('loading');
   const { data, error } = await supabase.from('events').select('*');
-  if(error){ setConnStatus('error', 'Could not load'); scheduleRetry(); return; }
+  if(error){ setConnStatus('error', 'Could not load'); setLoading('error'); scheduleRetry(); return; }
   allEvents = data || [];
   renderCalendar(); renderUpcoming();
+  setLoading('done');
   setConnStatus('live');
 }
 
